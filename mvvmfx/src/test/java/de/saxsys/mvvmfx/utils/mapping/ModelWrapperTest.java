@@ -479,6 +479,26 @@ public class ModelWrapperTest {
         personWrapper.reset();
         assertThat(personWrapper.isDifferent()).isTrue();
 	}
+    
+    @Test
+    public void testChangedFields() {
+        PersonFX person = new PersonFX();
+        person.setName("colin");
+        person.setNicknames(Arrays.asList("amos", "henry"));
+        
+        ModelWrapper<PersonFX> modelWrapper = new ModelWrapper<>();
+        modelWrapper.set(person);
+        
+        final StringProperty name = modelWrapper.field("name", PersonFX::nameProperty);
+        final ListProperty<String> nicknames = modelWrapper.field("nicknames", PersonFX::nicknamesProperty);
+        
+        assertThat(modelWrapper.getChangedFields()).isEmpty();
+        
+        name.set("charles");
+        assertThat(modelWrapper.getChangedFields()).isNotEmpty();
+        assertThat(modelWrapper.getChangedFields().get(0).getFieldName()).isEqualTo("name");
+        assertThat(modelWrapper.getChangedFields().get(0).getProperty().getValue()).isEqualTo("charles");
+    }
 
 
 

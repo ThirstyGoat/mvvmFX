@@ -34,6 +34,7 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 
 /**
@@ -118,7 +119,7 @@ import java.util.function.Supplier;
  * 	public void init(Person person) {
  * 		this.person = person;
  * 		reloadFromModel();
- * 	}
+ * 	}ModelWrapper.PropertyField<?, PersonFX, ?>
  * 	
  * 	public void reset() {
  * 		this.name.setValue(&quot;&quot;);
@@ -223,7 +224,7 @@ public class ModelWrapper<M> {
 	 * @param <T>
 	 * @param <M>
 	 */
-	private interface PropertyField<T, M, R extends Property<T>> {
+	public interface PropertyField<T, M, R extends Property<T>> {
 		void commit(M wrappedObject);
 		
 		void reload(M wrappedObject);
@@ -233,6 +234,24 @@ public class ModelWrapper<M> {
 		R getProperty();
 
         boolean isDifferent(M wrappedObject);
+
+        void setFieldName(String fieldName);
+
+        String getFieldName();
+	}
+	
+	private abstract class IdentifiablePropertyField<T, M, R extends Property<T>> implements PropertyField<T, M, R> {
+        String fieldName;
+
+        @Override
+        public void setFieldName(String fieldName) {
+			this.fieldName = fieldName;
+		}
+		
+		@Override
+		public String getFieldName() {
+			return fieldName;
+		}
 	}
 	
 	/**
@@ -241,7 +260,7 @@ public class ModelWrapper<M> {
 	 * 
 	 * @param <T>
 	 */
-	private class FxPropertyField<T, R extends Property<T>> implements PropertyField<T, M, R> {
+	private class FxPropertyField<T, R extends Property<T>> extends IdentifiablePropertyField<T, M, R> {
 		
 		private final T defaultValue;
 		private final Function<M, Property<T>> accessor;
@@ -295,7 +314,7 @@ public class ModelWrapper<M> {
 	 *
 	 * @param <T>
 	 */
-	private class BeanPropertyField<T, R extends Property<T>> implements PropertyField<T, M, R> {
+	private class BeanPropertyField<T, R extends Property<T>> extends IdentifiablePropertyField<T, M, R> {
 		
 		private final R targetProperty;
 		private final T defaultValue;
@@ -356,7 +375,7 @@ public class ModelWrapper<M> {
 	 *            the type of the list elements.
 	 */
 	private class FxListPropertyField<E, T extends ObservableList<E>, R extends Property<T>>
-			implements PropertyField<T, M, R> {
+			extends IdentifiablePropertyField<T, M, R> {
 
 		private final List<E> defaultValue;
 		private final ListPropertyAccessor<M, E> accessor;
@@ -412,7 +431,7 @@ public class ModelWrapper<M> {
 	 *            the type of the list elements.
 	 */
 	private class BeanListPropertyField<E, T extends ObservableList<E>, R extends Property<T>>
-			implements PropertyField<T, M, R> {
+			extends IdentifiablePropertyField<T, M, R> {
 
 		private final ListGetter<M, E> getter;
 		private final ListSetter<M, E> setter;
@@ -463,6 +482,10 @@ public class ModelWrapper<M> {
 	
 	private Set<PropertyField<?, M, ?>> fields = new HashSet<>();
 	private Map<String, PropertyField<?, M, ?>> identifiedFields = new HashMap<>();
+	private ListProperty<PropertyField<?, M, ?>> changedFields = new SimpleListProperty<>(
+			FXCollections.observableArrayList());
+	private ObservableList<PropertyField<?, M, ?>> unmodifiableChangedFields =
+			FXCollections.unmodifiableObservableList(changedFields);
 	
 	private M model;
 	
@@ -559,14 +582,17 @@ public class ModelWrapper<M> {
 
     private void calculateDifferenceFlag(){
         if(model != null) {
-            final Optional<PropertyField<?, M, ?>> optional = fields.stream()
-                    .filter(field -> field.isDifferent(model))
-                    .findAny();
+            changedFields.setAll(fields.stream()
+					.filter(field -> field.isDifferent(model))
+					.collect(Collectors.toList()));
 
-            diffFlag.set(optional.isPresent());
+            diffFlag.set(!changedFields.isEmpty());
         }
     }
 	
+    public ObservableList<PropertyField<?, M, ?>> getChangedFields() {
+        return unmodifiableChangedFields;
+    }
 	
 	
 	/** Field type String **/
@@ -1032,12 +1058,13 @@ public class ModelWrapper<M> {
 	}
 	
 	@SuppressWarnings("unchecked")
-	private <T, R extends Property<T>> R addIdentified(String fieldName, PropertyField<T, M, R> field) {
+	private <T, R extends Property<T>> R addIdentified(String fieldName, IdentifiablePropertyField<T, M, R> field) {
 		if (identifiedFields.containsKey(fieldName)) {
 			final Property<?> property = identifiedFields.get(fieldName).getProperty();
 			return (R) property;
 		} else {
 			identifiedFields.put(fieldName, field);
+			field.setFieldName(fieldName);
 			return add(field);
 		}
 	}
