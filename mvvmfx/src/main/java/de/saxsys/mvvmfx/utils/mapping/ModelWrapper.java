@@ -23,11 +23,15 @@ import de.saxsys.mvvmfx.utils.mapping.accessorfunctions.StringPropertyAccessor;
 import de.saxsys.mvvmfx.utils.mapping.accessorfunctions.StringSetter;
 import eu.lestard.doc.Beta;
 import javafx.beans.property.*;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 
 /**
@@ -344,6 +348,9 @@ public class ModelWrapper<M> {
 	
 	private Set<PropertyField<?, M, ?>> fields = new HashSet<>();
 	private Map<String, PropertyField<?, M, ?>> identifiedFields = new HashMap<>();
+	private ListProperty<Property<?>> changedProperties = new SimpleListProperty<>(FXCollections.observableArrayList());
+	private ObservableList<Property<?>> unmodifiableChangedProperties = FXCollections.unmodifiableObservableList(
+			changedProperties);
 	
 	private M model;
 	
@@ -440,14 +447,18 @@ public class ModelWrapper<M> {
 
     private void calculateDifferenceFlag(){
         if(model != null) {
-            final Optional<PropertyField<?, M, ?>> optional = fields.stream()
+            changedProperties.setAll(fields.stream()
                     .filter(field -> field.isDifferent(model))
-                    .findAny();
+                    .map(field -> field.getProperty())
+                    .collect(Collectors.toList()));
 
-            diffFlag.set(optional.isPresent());
+            diffFlag.set(!changedProperties.isEmpty());
         }
     }
 	
+    public ObservableList<Property<?>> getChangedProperties() {
+        return unmodifiableChangedProperties;
+    }
 	
 	
 	/** Field type String **/
