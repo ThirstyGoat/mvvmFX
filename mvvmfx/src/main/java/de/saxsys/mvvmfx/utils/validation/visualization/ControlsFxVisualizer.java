@@ -2,6 +2,8 @@ package de.saxsys.mvvmfx.utils.validation.visualization;
 
 import de.saxsys.mvvmfx.utils.validation.Severity;
 import de.saxsys.mvvmfx.utils.validation.ValidationMessage;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.control.Control;
 import org.controlsfx.validation.ValidationSupport;
 import org.controlsfx.validation.decoration.GraphicValidationDecoration;
@@ -24,6 +26,7 @@ import java.util.Optional;
 public class ControlsFxVisualizer extends ValidationVisualizerBase {
 	
 	private ValidationDecoration decoration = new GraphicValidationDecoration();
+	private BooleanProperty errorDecorationEnabled = new SimpleBooleanProperty(false);
 	
 	/**
 	 * Define a custom ControlsFX {@link ValidationVisualizer} that is used to visualize the validation results.
@@ -46,7 +49,7 @@ public class ControlsFxVisualizer extends ValidationVisualizerBase {
 	@Override
 	void applyVisualization(Control control, Optional<ValidationMessage> messageOptional, boolean required) {
 		
-		if (messageOptional.isPresent()) {
+		if (errorDecorationEnabled.get() && messageOptional.isPresent()) {
 			final ValidationMessage message = messageOptional.get();
 			
 			decoration.removeDecorations(control);
@@ -68,4 +71,15 @@ public class ControlsFxVisualizer extends ValidationVisualizerBase {
 		}
 	}
 	
+	public BooleanProperty errorDecorationEnabledProperty() {
+		return errorDecorationEnabled;
+	}
+	
+	public void setErrorDecorationEnabled(boolean errorDecorationEnabled) {
+		this.errorDecorationEnabled.set(errorDecorationEnabled);
+	}
+	
+	public boolean getErrorDecorationEnabled() {
+		return this.errorDecorationEnabled.get();
+	}
 }
