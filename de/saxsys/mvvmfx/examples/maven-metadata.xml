@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>de.saxsys.mvvmfx</groupId>
+  <artifactId>examples</artifactId>
+  <versioning>
+    <versions>
+      <version>1.4.0-SNAPSHOT</version>
+    </versions>
+    <lastUpdated>20150923023357</lastUpdated>
+  </versioning>
+</metadata>
